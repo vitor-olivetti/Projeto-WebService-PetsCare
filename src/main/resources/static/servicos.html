@@ -1,0 +1,214 @@
+    <!DOCTYPE html>
+
+    <html>
+    <head>
+        <title>Serviços</title>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    </head>
+
+    <body>
+        <h1>Gerenciamento de Serviços</h1>
+
+        <table>    
+            <tr> <td>ID:</td> <td><input type="text" id="txtId"></td> </tr>
+            <tr> <td>Status:</td> <td><input type="text" id="txtStatus"></td> </tr>
+            <tr> <td>Data:</td> <td><input type="text" id="txtData"></td> </tr>
+			<tr> <td>Valor:</td> <td><input type="text" id="txtValor"></td> </tr>
+			<tr> <td>Nota:</td> <td><input type="text" id="txtNota"></td> </tr>
+            <tr><td></td><td>
+                <input type="button" value="Novo" onclick="novaServico()" id="btnNovo">
+                <input type="button" value="Salvar" onclick="salvarServico()" id="btnSalvar">
+                <input type="button" value="Apagar" onclick="apagarServico()" id="btnApagar">
+                <input type="button" value="Cancelar" onclick="cancelarEdicao()" id="btnCancelar">
+            </td></tr>
+        </table> 
+        
+		<p style="font-weight:bold" id="paragrafoMensagem"></p>
+		
+        <table>    
+            <tr> <th>ID</th> <th>Status</th> <th>Data</th> <th>Valor</th> <th>Nota</th></tr>
+            <tbody id="corpoTabelaServicos"> </tbody>
+        </table>
+        
+	    <script>
+	        const corpoTabela = document.querySelector('#corpoTabelaServicos');
+	        const paragrafoMensagem = document.querySelector('#paragrafoMensagem');
+	        const txtStatus = document.querySelector('#txtStatus');
+	        const txtData = document.querySelector('#txtData');
+			const txtValor = document.querySelector('#txtValor');
+			const txtNota = document.querySelector('#txtNota');
+	        const txtId = document.querySelector('#txtId');
+	        
+	        const btnNovo = document.querySelector('#btnNovo');
+	        const btnSalvar = document.querySelector('#btnSalvar');
+	        const btnApagar = document.querySelector('#btnApagar');
+	        const btnCancelar = document.querySelector('#btnCancelar');
+	        var criandoNovoServico = false;
+	        
+	        inicializar();
+
+	        function inicializar() {
+	        	criandoNovaServico = false;
+	            paragrafoMensagem.innerHTML = 'Pressione o botão Novo ou selecione um serviço da lista:'
+	            txtId.value = '';
+	            txtStatus.value = '';
+	            txtData.value = '';
+				txtValor.value = '';
+				txtNota.value = '';
+
+	            txtId.disabled = true;
+	            txtStatus.disabled = true;
+	            txtData.disabled = true;
+				txtValor.disabled = true;
+				txtNota.disabled = true;
+
+	            btnNovo.disabled = false;
+	            btnSalvar.disabled = true;
+	            btnApagar.disabled = true;
+	            btnCancelar.disabled = true;
+	            listarTodasServicos();            
+	        }
+
+	        async function listarTodasServicos() {
+	            const URL = `/api/servicos`;
+	            fetch(URL)
+	              .then(resposta => { if (!resposta.ok) throw Error(resposta.status); return resposta;}) 
+	              .then(resposta => resposta.json())
+	              .then(jsonResponse => preencherTabela(jsonResponse))
+	              .catch(function(error) { paragrafoMensagem.innerHTML = "Erro ao listar serviços (código " + error.message + ")";});
+	        }
+	        
+	        
+	        function preencherTabela(servicos) {
+	            var linhasTabela = '';
+	            var n = servicos.length;
+	            for (var i = 0; i < n; i++) {
+	                var s = servicos[i];
+	                linhasTabela += 
+	                	`<tr><td><a href="javascript:void(0)" onclick="selecionarServico('${s.id}','${s.status}','${s.data}','${s.valor}','${s.nota}')">`
+	                    + s.id    + '</a></td>' +
+	                    '<td>' + s.status   + '</td>' +
+	                    '<td>' + s.data + '</td>' +
+						'<td>' + s.valor + '</td>'+
+						'<td>' + s.nota + '</td></tr>\n';
+	            }
+	            corpoTabela.innerHTML = linhasTabela;
+	        }
+
+	        function selecionarServico(id, status, data, valor, nota) {
+	        	criandoNovaServico = false;
+	            paragrafoMensagem.innerHTML = 'Altere e salve os dados do serviço, ou então apague o registro do serviço.'
+	            txtId.value = id;
+	            txtStatus.value = status;
+	            txtData.value = data;
+				txtValor.value = valor;
+				txtNota.value = nota;
+
+	            txtId.disabled = true;
+	            txtStatus.disabled = false;
+	            txtData.disabled = false;
+				txtValor.disabled = false;
+				txtNota.disabled = false;
+
+	            btnNovo.disabled = true;
+	            btnSalvar.disabled = false;
+	            btnApagar.disabled = false;
+	            btnCancelar.disabled = false;  
+	        }
+
+	        function novaServico() {
+	        	paragrafoMensagem.innerHTML = 'Preencha os dados do novo serviço...';
+	        	criandoNovaServico = true;
+	        	
+	        	txtId.value = '';
+	        	txtStatus.value = '';
+	        	txtData.value = '';
+				txtValor.value = '';
+				txtNota.value = '';
+	        	
+	        	txtId.disabled = true;
+	        	txtStatus.disabled = false;
+	        	txtData.disabled = false;
+				txtValor.disabled = false;
+				txtNota.disabled = false;
+	        	
+	        	btnNovo.disabled = true;
+	        	btnSalvar.disabled = false;
+	        	btnApagar.disabled = true;
+	        	btnCancelar.disabled = false;
+	        }
+	        
+	        function salvarServico() {
+	        	if (criandoNovaServico) {
+	        		criarServico();
+	        	}
+	        	else {
+	        		alterarServico();
+	        	}
+	        }
+	        
+	        async function criarServico() {
+	        	const URL = `/api/servicos`;
+	        	const dadosServico = {
+	        		'status': txtStatus.value,
+	        		'data': txtData.value,
+					'valor': txtValor.value,
+					'nota': txtNota.value
+	        	};
+	        	const postRequest = {
+	        		method: 'POST',
+	        		body: JSON.stringify(dadosServico),
+	        		headers: { 'Content-type': 'application/json' }
+	        	};
+	        	fetch(URL, postRequest)
+	        		.then(resposta => { if (!resposta.ok) throw Error(resposta.status); return resposta; } )
+	        		.then(resposta => resposta.json())
+	        		.then(jsonResponse => inicializar())
+	        		.catch(function(error) { paragrafoMensagem.innerHTML = 'Erro ao criar nova serviço (código ' + error.message + ')'; } );
+	        }
+	        
+	        async function alterarServico() {
+	        	const ID = txtId.value;
+	        	const URL = `/api/servicos/${ID}`;
+	        	const dadosServico = {
+	        		'id': ID,
+	        		'status': txtStatus.value,
+	        		'data': txtData.value,
+					'valor': txtValor.value,
+					'nota': txtNota.value
+	        	};
+	        	const putRequest = {
+	        		method: 'PUT',
+	        		body: JSON.stringify(dadosServico),
+	        		headers: { 'Content-type': 'application/json' }
+	        	};
+	        	fetch(URL, putRequest)
+	        		.then(resposta => { if (!resposta.ok) throw Error(resposta.status); return resposta; } )
+	        		.then(resposta => resposta.json())
+	        		.then(jsonResponse => inicializar())
+	        		.catch(function(error) { paragrafoMensagem.innerHTML = 'Erro ao alterar serviço (código ' + error.message + ')'; } );	        	
+	        }
+	        
+	        function cancelarEdicao() {
+	        	inicializar();
+	        }
+	        
+	        async function apagarServico() {
+	        	const ID = txtId.value;
+	        	const URL = `/api/servicos/${ID}`;
+	        	const deleteRequest = {
+	        		method: 'DELETE'
+	        	};
+	        	fetch(URL, deleteRequest)
+	        		.then(resposta => { if (!resposta.ok) throw Error(resposta.status); return resposta; } )
+	        		.then(resposta => inicializar())
+	        		.catch(function(error) { paragrafoMensagem.innerHTML = 'Erro ao apagar serviço (código ' + error.message + ')'; } );	        		
+	        }
+	        
+	    </script>    
+    </body>
+    
+    </html>
+
+    
